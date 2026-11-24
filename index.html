@@ -161,7 +161,7 @@ const PLACAS = [
   { marca: 'TOPTEC', productos: ['Placa fibrocemento'] },
   { marca: 'Eternit', lineas: ['Eterboard', 'Design'], productos: ['Placa fibrocemento'] },
   { marca: 'Etex', lineas: ['Superboard', 'Gyplac'], productos: ['Placa fibrocemento', 'Yeso RH', 'Yeso RF', 'Yeso estándar'] },
-  { marca: 'Knauf', productos: ['Yeso RH', 'Yeso RF (por confirmar)', 'Yeso estándar'] },
+  { marca: 'Knauf', productos: ['Yeso RH', 'Yeso RF', 'Yeso estándar'] },
 ];
 
 const MARCAS = {
@@ -502,7 +502,8 @@ function pintarResaltado() {
 function elegir(parte) {
   seleccion = parte;
   document.querySelectorAll('#partes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.parte === parte)));
-  if (parte === 'cielos' && cubiertaVisible) alternarCubierta();
+  if (parte === 'cielos' && cubiertaVisible) alternarCubierta();    // para ver los cielos se quita la cubierta
+  if (parte === 'cubierta' && !cubiertaVisible) alternarCubierta(); // al elegir la cubierta, vuelve a aparecer
   pintarResaltado();
   pintarDetalle();
 }

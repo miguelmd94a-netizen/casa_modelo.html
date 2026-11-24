@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casa modelo TOPTEC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Paleta del Manual de Marca TOPTEC */
+  :root {
+    --gris: #575756; --amarillo: #ffd500; --amarillo-2: #dfb100; --amarillo-3: #cea800;
+    --azul: #0058a5; --azul-2: #00508f; --azul-3: #004a7d; --rojo: #e30613; --rojo-2: #bc2f27; --rojo-3: #a81815;
+    --bg: #ececeb; --panel: #ffffff; --ink: #3a3a39; --muted: #6f6f6e; --line: #dcdcdb; --header: #575756;
+    --escena: #e4e6e8; --chip: #f3f3f2;
+    /* Acentos suaves (en lugar de amarillo, azul y rojo puros) */
+    --franja-1: #8a8f94; --franja-2: #a3a8ac; --franja-3: #bcc0c3;
+    --acento: #4f6475; --acento-suave: #e3e8ec; --acento-texto: #2f3e4a;
+    --toptec: #d9bf5a; --toptec-fondo: #fbf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #3f3f3e; --panel: #575756; --ink: #ffffff; --muted: #dadad9; --line: #6d6d6c; --header: #2f2f2e;
+      --escena: #333332; --chip: #4a4a49;
+      --franja-1: #5c6166; --franja-2: #6e7378; --franja-3: #80858a;
+      --acento: #9fb3c4; --acento-suave: #66707a; --acento-texto: #ffffff;
+      --toptec: #c9b25a; --toptec-fondo: #5f5b48; }
+  }
+  :root[data-theme="dark"] { --bg: #3f3f3e; --panel: #575756; --ink: #ffffff; --muted: #dadad9; --line: #6d6d6c; --header: #2f2f2e;
+    --escena: #333332; --chip: #4a4a49;
+    --franja-1: #5c6166; --franja-2: #6e7378; --franja-3: #80858a;
+    --acento: #9fb3c4; --acento-suave: #66707a; --acento-texto: #ffffff;
+    --toptec: #c9b25a; --toptec-fondo: #5f5b48; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 Outfit, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: relative; color: #fff; padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+    background:
+      linear-gradient(135deg, var(--franja-1) 0 10px, var(--franja-2) 10px 20px, var(--franja-3) 20px 32px, transparent 32px) top left / 70px 50% no-repeat,
+      linear-gradient(225deg, var(--franja-1) 0 10px, var(--franja-2) 10px 20px, var(--franja-3) 20px 32px, transparent 32px) top right / 70px 50% no-repeat,
+      var(--header); }
+  header .logo { padding-left: 26px; line-height: 1.1; }
+  header b { font-size: 24px; font-weight: 800; letter-spacing: .02em; }
+  header .sub { display: block; font-size: 13px; font-weight: 300; }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .tarjeta { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .escena { position: relative; overflow: hidden; }
+  #lienzo { display: block; width: 100%; height: min(68vh, 620px); min-height: 360px; background: var(--escena); border-radius: 12px; touch-action: none; cursor: grab; }
+  #lienzo.sobre-parte { cursor: pointer; }
+  #lienzo:active { cursor: grabbing; }
+  .ayuda { position: absolute; left: 12px; bottom: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; pointer-events: none; }
+  .ayuda span { background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; font-size: 12.5px; color: var(--muted); }
+  .controles { position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .controles button { font: inherit; font-size: 13px; cursor: pointer; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+  .controles button[aria-pressed="true"] { background: var(--acento-suave); color: var(--acento-texto); border-color: var(--acento); font-weight: 600; }
+  .etiqueta { position: absolute; transform: translate(-50%, -50%); pointer-events: none; font-size: 12px; font-weight: 700; letter-spacing: .03em;
+    background: var(--gris); color: #fff; padding: 3px 8px; border-radius: 999px; white-space: nowrap; opacity: .9; }
+  .etiqueta.activa { background: var(--acento); color: #fff; opacity: 1; }
+
+  aside { display: grid; gap: 12px; }
+  .partes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; }
+  .partes button { font: inherit; text-align: left; cursor: pointer; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); display: grid; gap: 2px; }
+  .partes button b { font-size: 15px; }
+  .partes button span { font-size: 12.5px; color: var(--muted); }
+  .partes button[aria-pressed="true"] { background: var(--acento-suave); border-color: var(--acento); color: var(--acento-texto); box-shadow: inset 3px 0 0 var(--acento); }
+  .partes button[aria-pressed="true"] span { color: var(--acento-texto); }
+  .detalle { padding: 16px; display: grid; gap: 12px; }
+  .detalle h2 { margin: 0; font-size: 20px; }
+  .detalle p { margin: 0; color: var(--muted); font-size: 14px; }
+  .marcas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .marcas li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; background: var(--chip); }
+  .marcas li.toptec { border: 2px solid var(--toptec); background: var(--toptec-fondo); }
+  .marcas .nombre { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; font-size: 15.5px; }
+  .marcas .lineas { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .marcas .productos { display: flex; flex-wrap: wrap; gap: 5px; }
+  .marcas .productos span { font-size: 12px; border-radius: 999px; padding: 2px 8px; background: var(--panel); border: 1px solid var(--line); }
+  .insignia { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+  .insignia.datos { background: var(--acento-suave); color: var(--acento-texto); border: 1px solid var(--acento); }
+  .insignia.portafolio { background: transparent; color: var(--muted); border: 1px dashed var(--muted); }
+  .vacio { color: var(--muted); font-size: 14px; }
+  .grupo { margin: 4px 0 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .nota { font-size: 12.5px; color: var(--muted); padding: 0 16px 14px; margin: 0; }
+
+  /* Pantalla de carga */
+  #pantallaCarga { position: fixed; inset: 0; z-index: 3000; display: grid; place-content: center; justify-items: center; gap: 22px; padding: 24px;
+    color: #fff; text-align: center; transition: opacity .35s ease;
+    background:
+      linear-gradient(135deg, var(--franja-1) 0 18px, var(--franja-2) 18px 36px, var(--franja-3) 36px 58px, transparent 58px) top left / 150px 150px no-repeat,
+      linear-gradient(315deg, var(--franja-1) 0 18px, var(--franja-2) 18px 36px, var(--franja-3) 36px 58px, transparent 58px) bottom right / 150px 150px no-repeat,
+      var(--header); }
+  #pantallaCarga.lista { opacity: 0; pointer-events: none; }
+  #pantallaCarga .marca-carga { line-height: 1.1; }
+  #pantallaCarga .marca-carga b { display: block; font-size: 52px; font-weight: 800; letter-spacing: .02em; }
+  #pantallaCarga .marca-carga span { display: block; font-size: 16px; font-weight: 300; }
+  .girando { width: 64px; height: 64px; border-radius: 50%; border: 6px solid rgba(255, 255, 255, .18); border-top-color: #ffffff; animation: girar .9s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .girando { animation-duration: 2.5s; } }
+  #cargaTexto { font-size: 26px; font-weight: 600; max-width: 560px; }
+  #pantallaCarga.error .girando { display: none; }
+  #pantallaCarga button { font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 8px; cursor: pointer; background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, .7); }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="pantallaCarga" role="status" aria-live="polite">
+  <div class="marca-carga" aria-label="TOPTEC, Casa modelo"><b>TOPTEC</b><span>Casa modelo</span></div>
+  <div class="girando" aria-hidden="true"></div>
+  <div id="cargaTexto">Cargando…</div>
+  <button type="button" id="btnReintentarCarga" hidden>Reintentar</button>
+</div>
+<header>
+  <div class="logo"><b>TOPTEC</b><span class="sub">Casa modelo: marcas por sistema constructivo</span></div>
+</header>
+
+<main>
+  <section class="tarjeta escena" aria-label="Casa modelo en 3D">
+    <canvas id="lienzo" aria-label="Casa en 3D. Usa los botones de la derecha para elegir una parte."></canvas>
+    <div id="etiquetas"></div>
+    <div class="controles">
+      <button type="button" id="btnCubierta" aria-pressed="false" title="Quita la cubierta para ver los cielos">Quitar cubierta</button>
+      <button type="button" id="btnCentrar">Centrar vista</button>
+    </div>
+    <div class="ayuda"><span>Arrastra para girar · rueda o pellizco para acercar</span><span>Clic en una parte de la casa</span></div>
+  </section>
+
+  <aside>
+    <div class="tarjeta partes" id="partes" role="group" aria-label="Partes de la casa"></div>
+    <div class="tarjeta">
+      <div class="detalle" id="detalle" aria-live="polite"></div>
+      <p class="nota" id="nota"></p>
+    </div>
+  </aside>
+</main>
+
+<script type="module">
+// =====================================================================
+//  DATOS EDITABLES: marcas por parte de la casa
+// ---------------------------------------------------------------------
+//  Copia fija tomada del monitoreo de precios al 18/11/2026.
+//  Cada marca lleva:
+//    marca:      nombre que se muestra
+//    lineas:     (opcional) líneas o submarcas del grupo, p. ej. Eterboard
+//    productos:  lo que aporta la marca en esa parte
+//    portafolio: (opcional) true = la marca fabrica para esa parte, pero
+//                no aparece en el monitoreo de precios
+//  En Paredes y Cielos, las marcas cuyos productos son solo "Masilla" se
+//  muestran aparte, bajo "Masillas para juntas y acabado".
+//  TOPTEC siempre sale primero, sin importar dónde se escriba.
+// =====================================================================
+const FECHA_DATOS = '18/11/2026';
+
+// Marcas de masillas (las mismas para Paredes y Cielos)
+const MASILLAS = ['Corona', 'Supermastick', 'Sika', 'Megaacabados', 'Megajuntas', 'Gypsumastic', 'Sellaflex', 'Sellapanel',
+  'Topex', 'Recol', 'Algreco', 'Coverfil', 'Lider', 'Sapolin', 'Bellota']
+  .map(marca => ({ marca, productos: ['Masilla'] }));
+
+// Placas para muros y cielo raso (las mismas marcas en Paredes y Cielos)
+const PLACAS = [
+  { marca: 'TOPTEC', productos: ['Placa fibrocemento'] },
+  { marca: 'Eternit', lineas: ['Eterboard'], productos: ['Placa fibrocemento'] },
+  { marca: 'Etex', lineas: ['Superboard', 'Gyplac'], productos: ['Placa fibrocemento', 'Placa yeso'] },
+  { marca: 'Knauf', productos: ['Placa yeso'] },
+];
+
+const MARCAS = {
+  cubierta: [
+    { marca: 'TOPTEC', productos: ['Teja fibrocemento', 'Teja polipropileno'] },
+    { marca: 'Eternit', productos: ['Teja fibrocemento', 'Teja polipropileno'] },
+    { marca: 'Etex', lineas: ['Colombit'], productos: ['Teja fibrocemento'] },
+    { marca: 'Ajover', productos: ['Teja UPVC', 'Teja policarbonato', 'Teja polipropileno'] },
+    { marca: 'Arkos', productos: ['Teja UPVC', 'Teja policarbonato'] },
+    ...['Klar', 'Bolkow', 'Sigmatech', 'Fibromath', 'Castellana', 'ADL', 'Sigma'].map(marca => ({ marca, productos: ['Teja UPVC'] })),
+    ...['Mathiesen', 'Makrolux'].map(marca => ({ marca, productos: ['Teja policarbonato'] })),
+    ...['Koyo', 'Techolit'].map(marca => ({ marca, productos: ['Teja polipropileno'] })),
+    { marca: 'Proteja', productos: ['Teja fibrocemento colonial'] },
+  ],
+  paredes: [...PLACAS, ...MASILLAS],
+  cielos: [...PLACAS, ...MASILLAS],
+  entrepiso: [
+    { marca: 'TOPTEC', productos: ['Placa fibrocemento 14 mm o más'] },
+    { marca: 'Eternit', lineas: ['Eterboard'], productos: ['Placa fibrocemento 14 mm o más'] },
+    { marca: 'Etex', lineas: ['Superboard'], productos: ['Placa fibrocemento 14 mm o más'] },
+    { marca: 'Knauf', productos: [], portafolio: true },
+  ],
+};
+
+// Textos de cada parte
+const PARTES = {
+  cubierta: { nombre: 'Cubierta', resumen: 'Tejas y caballetes', texto: 'Tejas de fibrocemento, UPVC, polipropileno y policarbonato, con sus caballetes y accesorios.' },
+  paredes: { nombre: 'Paredes', resumen: 'Placas y masillas', texto: 'Muros en construcción liviana: placas de fibrocemento (6 a 12 mm) o de yeso, con masillas para juntas y acabado.' },
+  cielos: { nombre: 'Cielos', resumen: 'Cielo raso', texto: 'Cielo raso con placas de yeso o fibrocemento delgado (4 a 8 mm) y masillas para juntas y acabado.' },
+  entrepiso: { nombre: 'Pisos', resumen: 'Entrepiso', texto: 'Entrepiso seco con placas de fibrocemento de alta densidad (14 mm o más).' },
+};
+// ======================= Fin de los datos editables =======================
+
+const el = id => document.getElementById(id);
+const escapar = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+// TOPTEC primero, luego las del monitoreo y al final las de portafolio (el resto en el orden en que están escritas)
+const marcas = Object.fromEntries(Object.entries(MARCAS).map(([parte, lista]) => [parte,
+  lista.map((m, i) => ({ ...m, i })).sort((a, b) =>
+    (b.marca === 'TOPTEC') - (a.marca === 'TOPTEC') || !!a.portafolio - !!b.portafolio || a.i - b.i)]));
+
+el('nota').textContent = `Marcas vistas en el monitoreo de precios al ${FECHA_DATOS} (copia fija). "Portafolio" = la marca fabrica para esa parte, pero no aparece en el monitoreo.`;
+
+let THREE, OrbitControls;
+try {
+  THREE = await import('three');
+  ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+} catch (e) {
+  console.error(e);
+  el('pantallaCarga').classList.add('error');
+  el('cargaTexto').textContent = 'No se pudo cargar el visor 3D. Revisa tu conexión a internet.';
+  el('btnReintentarCarga').hidden = false;
+  el('btnReintentarCarga').addEventListener('click', () => location.reload());
+  throw e;
+}
+
+// ================= Escena 3D =================
+const lienzo = el('lienzo');
+const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+const VISTA_INICIAL = new THREE.Vector3(13, 9.5, 15);
+camera.position.copy(VISTA_INICIAL);
+const controls = new OrbitControls(camera, lienzo);
+controls.target.set(0, 3, 0);
+controls.enableDamping = true;
+controls.minDistance = 8; controls.maxDistance = 40;
+controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a80, 1.1));
+const sol = new THREE.DirectionalLight(0xffffff, 1.6);
+sol.position.set(10, 16, 8);
+sol.castShadow = true;
+sol.shadow.mapSize.set(2048, 2048);
+Object.assign(sol.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14 });
+scene.add(sol);
+
+// Texturas sencillas dibujadas en un canvas (ondas de teja y juntas de placa)
+function textura(dibujar, repetirX, repetirY) {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  dibujar(c.getContext('2d'));
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repetirX, repetirY); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const texTeja = textura(g => {
+  const grad = g.createLinearGradient(0, 0, 256, 0);
+  grad.addColorStop(0, '#8f9496'); grad.addColorStop(.5, '#c3c7c9'); grad.addColorStop(1, '#8f9496');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 250, 256, 6);
+}, 14, 4);
+const texPlaca = (fondo, junta) => textura(g => {
+  g.fillStyle = fondo; g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = junta; g.lineWidth = 3; g.strokeRect(0, 0, 256, 256);
+}, 4, 2);
+
+const piezasPorParte = { cubierta: [], paredes: [], cielos: [], entrepiso: [] };
+function pieza(parte, geometria, material, x, y, z) {
+  const m = new THREE.Mesh(geometria, material);
+  m.position.set(x, y, z);
+  m.castShadow = m.receiveShadow = true;
+  if (parte) { m.userData.parte = parte; piezasPorParte[parte].push(m); }
+  scene.add(m);
+  return m;
+}
+const mat = (opciones) => new THREE.MeshStandardMaterial({ roughness: .85, metalness: 0, ...opciones });
+
+// Medidas (metros): casa de 9 x 7, dos pisos de 2.8 m, cubierta a dos aguas. El frente queda abierto (vista en corte).
+const ANCHO = 9, FONDO = 7, PISO = 2.8, MURO = 0.15, LOSA = 0.22, ALTO_CUMBRE = 2.4, ALERO = 0.5;
+const ALTO = PISO * 2;
+
+// Terreno y placa de cimentación (no se pueden elegir)
+pieza(null, new THREE.CircleGeometry(22, 48), mat({ color: 0x9fae8f }), 0, -0.02, 0).rotation.x = -Math.PI / 2;
+pieza(null, new THREE.BoxGeometry(ANCHO + 0.4, 0.2, FONDO + 0.4), mat({ color: 0xa7a7a2 }), 0, 0.1, 0);
+
+// Paredes: fondo, laterales, culatas (triángulos bajo la cubierta) y divisiones internas
+const matMuro = mat({ map: texPlaca('#eeeae2', '#d6d0c4') });
+const matMuroInt = mat({ map: texPlaca('#f6f3ee', '#e2ddd3') });
+pieza('paredes', new THREE.BoxGeometry(ANCHO, ALTO, MURO), matMuro, 0, 0.2 + ALTO / 2, -FONDO / 2 + MURO / 2);
+pieza('paredes', new THREE.BoxGeometry(MURO, ALTO, FONDO), matMuro, -ANCHO / 2 + MURO / 2, 0.2 + ALTO / 2, 0);
+pieza('paredes', new THREE.BoxGeometry(MURO, ALTO, FONDO), matMuro, ANCHO / 2 - MURO / 2, 0.2 + ALTO / 2, 0);
+// Muro frontal solo en las esquinas (para que se vea que existe, sin tapar el corte)
+pieza('paredes', new THREE.BoxGeometry(1.6, ALTO, MURO), matMuro, -ANCHO / 2 + 0.8, 0.2 + ALTO / 2, FONDO / 2 - MURO / 2);
+pieza('paredes', new THREE.BoxGeometry(1.6, ALTO, MURO), matMuro, ANCHO / 2 - 0.8, 0.2 + ALTO / 2, FONDO / 2 - MURO / 2);
+const culata = new THREE.Shape();
+culata.moveTo(-FONDO / 2, 0); culata.lineTo(FONDO / 2, 0); culata.lineTo(0, ALTO_CUMBRE); culata.closePath();
+for (const lado of [-1, 1]) {
+  // La forma se extruye en Z; al girarla 90° el grosor queda en X, desde x hasta x + MURO
+  const c = pieza('paredes', new THREE.ExtrudeGeometry(culata, { depth: MURO, bevelEnabled: false }), matMuro,
+    lado * (ANCHO / 2) - (lado > 0 ? MURO : 0), 0.2 + ALTO, 0);
+  c.rotation.y = Math.PI / 2;
+}
+for (const piso of [0, 1]) {
+  pieza('paredes', new THREE.BoxGeometry(MURO, PISO - LOSA, FONDO - 1.2), matMuroInt, -0.6, 0.2 + piso * PISO + (PISO - LOSA) / 2, -0.6);
+  pieza('paredes', new THREE.BoxGeometry(3.2, PISO - LOSA, MURO), matMuroInt, -ANCHO / 2 + 1.6 + 0.15, 0.2 + piso * PISO + (PISO - LOSA) / 2, 0.2);
+}
+// Ventanas (decoración, no se eligen)
+const matVidrio = mat({ color: 0x5d7f98, roughness: .2, metalness: .3 });
+for (const piso of [0, 1]) for (const x of [-2.6, 1.2, 3.2]) pieza(null, new THREE.BoxGeometry(1.1, 1.1, 0.04), matVidrio, x, 0.2 + piso * PISO + 1.6, -FONDO / 2 - 0.01);
+for (const piso of [0, 1]) for (const lado of [-1, 1]) {
+  const v = pieza(null, new THREE.BoxGeometry(0.04, 1.1, 1.3), matVidrio, lado * (ANCHO / 2 + 0.01), 0.2 + piso * PISO + 1.6, 0.9);
+  v.castShadow = false;
+}
+
+// Pisos (entrepiso): placa entre el primer y el segundo piso
+const matEntrepiso = mat({ map: texPlaca('#b9b5ab', '#8f8b82') });
+pieza('entrepiso', new THREE.BoxGeometry(ANCHO - 2 * MURO, LOSA, FONDO - MURO), matEntrepiso, 0, 0.2 + PISO - LOSA / 2, MURO / 2);
+
+// Cielos: cielo raso del primer piso (bajo el entrepiso) y del segundo (bajo la cubierta)
+const matCielo = mat({ map: texPlaca('#fbfaf7', '#e5e1d8'), side: THREE.DoubleSide });
+pieza('cielos', new THREE.BoxGeometry(ANCHO - 2 * MURO, 0.04, FONDO - MURO), matCielo, 0, 0.2 + PISO - LOSA - 0.06, MURO / 2);
+pieza('cielos', new THREE.BoxGeometry(ANCHO - 2 * MURO, 0.04, FONDO - MURO), matCielo, 0, 0.2 + ALTO - 0.05, MURO / 2);
+
+// Cubierta a dos aguas: dos faldones con onda de teja
+const faldon = Math.hypot(FONDO / 2 + ALERO, ALTO_CUMBRE + ALERO * ALTO_CUMBRE / (FONDO / 2));
+const inclinacion = Math.atan2(ALTO_CUMBRE, FONDO / 2);
+const matTeja = mat({ map: texTeja, roughness: .7 });
+for (const lado of [-1, 1]) {
+  const f = pieza('cubierta', new THREE.BoxGeometry(ANCHO + 2 * ALERO, 0.08, faldon), matTeja, 0, 0, 0);
+  f.rotation.x = lado * inclinacion;
+  const mitad = faldon / 2;
+  f.position.set(0, 0.2 + ALTO + ALTO_CUMBRE - Math.sin(inclinacion) * mitad + 0.08, lado * Math.cos(inclinacion) * mitad);
+}
+pieza('cubierta', new THREE.CylinderGeometry(0.14, 0.14, ANCHO + 2 * ALERO, 16), mat({ color: 0x8c9193 }), 0, 0.2 + ALTO + ALTO_CUMBRE + 0.1, 0).rotation.z = Math.PI / 2;
+
+// ================= Selección =================
+const RESALTE = new THREE.Color(0x7fa6c4);   // azul grisáceo suave para la parte elegida
+let seleccion = null, encima = null;
+function pintarResaltado() {
+  for (const [parte, piezas] of Object.entries(piezasPorParte)) {
+    for (const m of piezas) {
+      const activa = parte === seleccion, sobre = parte === encima && !activa;
+      m.material = m.userData.base || (m.userData.base = m.material);
+      if (activa || sobre) {
+        m.material = m.userData.resaltado || (m.userData.resaltado = m.userData.base.clone());
+        m.material.emissive = RESALTE;
+        m.material.emissiveIntensity = activa ? .4 : .15;
+      }
+    }
+  }
+  document.querySelectorAll('.etiqueta').forEach(e => e.classList.toggle('activa', e.dataset.parte === seleccion));
+}
+
+function elegir(parte) {
+  seleccion = parte;
+  document.querySelectorAll('#partes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.parte === parte)));
+  if (parte === 'cielos' && cubiertaVisible) alternarCubierta();
+  pintarResaltado();
+  pintarDetalle();
+}
+
+function pintarDetalle() {
+  const caja = el('detalle');
+  if (!seleccion) {
+    caja.innerHTML = `<h2>Elige una parte de la casa</h2><p>Haz clic en la cubierta, las paredes, los cielos o los pisos, o usa los botones de arriba, para ver qué marcas participan en ese sistema constructivo.</p>`;
+    return;
+  }
+  const p = PARTES[seleccion], lista = marcas[seleccion];
+  const tarjeta = m => `
+      <li class="${m.marca === 'TOPTEC' ? 'toptec' : ''}">
+        <div class="nombre"><span>${escapar(m.marca)}${m.lineas?.length ? ` <span class="lineas">(${escapar(m.lineas.join(', '))})</span>` : ''}</span>
+          <span class="insignia ${m.portafolio ? 'portafolio' : 'datos'}">${m.portafolio ? 'Portafolio' : 'En el monitoreo'}</span></div>
+        ${m.productos?.length ? `<div class="productos">${m.productos.map(x => `<span>${escapar(x)}</span>`).join('')}</div>` : ''}
+      </li>`;
+  // En paredes y cielos, las marcas que solo venden masillas van aparte de las de placas
+  const soloMasilla = m => m.productos?.length > 0 && m.productos.every(x => x === 'Masilla');
+  const grupos = lista.some(soloMasilla) && lista.some(m => !soloMasilla(m))
+    ? [['Placas', lista.filter(m => !soloMasilla(m))], ['Masillas para juntas y acabado', lista.filter(soloMasilla)]]
+    : [['', lista]];
+  caja.innerHTML = `<h2>${escapar(p.nombre)}</h2><p>${escapar(p.texto)}</p>
+    <p><b>${lista.length}</b> marcas</p>
+    ${lista.length ? grupos.map(([nombre, l]) => `${nombre ? `<h3 class="grupo">${escapar(nombre)} · ${l.length}</h3>` : ''}
+      <ul class="marcas">${l.map(tarjeta).join('')}</ul>`).join('') : '<p class="vacio">No hay marcas registradas para esta parte.</p>'}`;
+}
+
+el('partes').innerHTML = Object.entries(PARTES).map(([id, p]) =>
+  `<button type="button" data-parte="${id}" aria-pressed="false"><b>${escapar(p.nombre)}</b><span>${escapar(p.resumen)} · ${marcas[id].length} marcas</span></button>`).join('');
+el('partes').addEventListener('click', e => { const b = e.target.closest('button[data-parte]'); if (b) elegir(b.dataset.parte); });
+
+// Cubierta visible u oculta (para ver los cielos del segundo piso)
+let cubiertaVisible = true;
+function alternarCubierta() {
+  cubiertaVisible = !cubiertaVisible;
+  piezasPorParte.cubierta.forEach(m => { m.visible = cubiertaVisible; });
+  el('btnCubierta').setAttribute('aria-pressed', String(!cubiertaVisible));
+  el('btnCubierta').textContent = cubiertaVisible ? 'Quitar cubierta' : 'Poner cubierta';
+}
+el('btnCubierta').addEventListener('click', alternarCubierta);
+el('btnCentrar').addEventListener('click', () => { camera.position.copy(VISTA_INICIAL); controls.target.set(0, 3, 0); controls.update(); });
+
+// Clic (sin arrastrar) sobre una pieza
+const rayo = new THREE.Raycaster(), puntero = new THREE.Vector2();
+const elegibles = () => Object.values(piezasPorParte).flat().filter(m => m.visible);
+function parteBajo(evento) {
+  const r = lienzo.getBoundingClientRect();
+  puntero.set(((evento.clientX - r.left) / r.width) * 2 - 1, -((evento.clientY - r.top) / r.height) * 2 + 1);
+  rayo.setFromCamera(puntero, camera);
+  return rayo.intersectObjects(elegibles(), false)[0]?.object.userData.parte || null;
+}
+let inicio = null;
+lienzo.addEventListener('pointerdown', e => { inicio = { x: e.clientX, y: e.clientY }; });
+lienzo.addEventListener('pointerup', e => {
+  if (inicio && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) < 6) { const p = parteBajo(e); if (p) elegir(p); }
+  inicio = null;
+});
+lienzo.addEventListener('pointermove', e => {
+  if (e.buttons) return;
+  const p = parteBajo(e);
+  if (p !== encima) { encima = p; lienzo.classList.toggle('sobre-parte', !!p); pintarResaltado(); }
+});
+lienzo.addEventListener('pointerleave', () => { if (encima) { encima = null; lienzo.classList.remove('sobre-parte'); pintarResaltado(); } });
+
+// Etiquetas flotantes con el nombre de cada parte
+const ANCLAS = {
+  cubierta: new THREE.Vector3(0, 0.2 + ALTO + ALTO_CUMBRE + 0.6, 0),
+  paredes: new THREE.Vector3(-ANCHO / 2 - 0.2, 0.2 + PISO * 1.5, -1.6),
+  cielos: new THREE.Vector3(1.8, 0.2 + PISO - LOSA - 0.35, 1.8),
+  entrepiso: new THREE.Vector3(1.8, 0.2 + PISO + 0.35, 2.6),
+};
+el('etiquetas').innerHTML = Object.keys(ANCLAS).map(p => `<span class="etiqueta" data-parte="${p}">${escapar(PARTES[p].nombre)}</span>`).join('');
+const v = new THREE.Vector3();
+function moverEtiquetas() {
+  const r = lienzo.getBoundingClientRect();
+  document.querySelectorAll('.etiqueta').forEach(e => {
+    const parte = e.dataset.parte;
+    e.hidden = parte === 'cubierta' && !cubiertaVisible;
+    v.copy(ANCLAS[parte]).project(camera);
+    e.style.left = `${(v.x + 1) / 2 * r.width}px`;
+    e.style.top = `${(1 - v.y) / 2 * r.height}px`;
+  });
+}
+
+// Fondo de la escena según el tema (claro u oscuro del sistema)
+function colorFondo() { scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--escena').trim() || '#e4e6e8'); }
+colorFondo();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', colorFondo);
+
+function ajustar() {
+  const r = lienzo.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(ajustar).observe(lienzo);
+ajustar();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); moverEtiquetas(); });
+
+pintarDetalle();
+el('pantallaCarga').classList.add('lista');
+setTimeout(() => el('pantallaCarga').remove(), 400);
+</script>
+</body>
+</html>

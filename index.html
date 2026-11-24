@@ -61,6 +61,7 @@
   aside { display: grid; gap: 12px; }
   .partes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; }
   .partes button { font: inherit; text-align: left; cursor: pointer; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); display: grid; gap: 2px; }
+  .partes button:last-child:nth-child(odd) { grid-column: span 2; }
   .partes button b { font-size: 15px; }
   .partes button span { font-size: 12.5px; color: var(--muted); }
   .partes button[aria-pressed="true"] { background: var(--acento-suave); border-color: var(--acento); color: var(--acento-texto); box-shadow: inset 3px 0 0 var(--acento); }
@@ -188,6 +189,12 @@ const MARCAS = {
     { marca: 'Etex', lineas: ['Superboard'], productos: ['Placa fibrocemento 14 mm o más'] },
     { marca: 'Knauf', productos: [], portafolio: true },
   ],
+  // Tanques: por ahora solo el portafolio conocido. Agregar aquí las marcas que aparezcan en el monitoreo.
+  tanques: [
+    { marca: 'TOPTEC', productos: ['Tanque de agua'], portafolio: true },
+    { marca: 'Eternit', productos: ['Tanque de agua'], portafolio: true },
+    { marca: 'Etex', productos: ['Tanque de agua'], portafolio: true },
+  ],
 };
 
 // Textos de cada parte
@@ -196,6 +203,7 @@ const PARTES = {
   paredes: { nombre: 'Paredes', resumen: 'Placas y masillas', texto: 'Muros en construcción liviana: placas de fibrocemento (6 a 12 mm) o de yeso, con masillas para juntas y acabado.' },
   cielos: { nombre: 'Cielos', resumen: 'Cielo raso', texto: 'Cielo raso con placas de yeso o fibrocemento delgado (4 a 8 mm) y masillas para juntas y acabado.' },
   entrepiso: { nombre: 'Pisos', resumen: 'Entrepiso', texto: 'Entrepiso seco con placas de fibrocemento de alta densidad (14 mm o más).' },
+  tanques: { nombre: 'Tanques', resumen: 'Almacenamiento de agua', texto: 'Tanques para almacenamiento de agua potable de la vivienda.' },
 };
 // ======================= Fin de los datos editables =======================
 
@@ -230,10 +238,10 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
-const VISTA_INICIAL = new THREE.Vector3(13, 9.5, 15);
+const VISTA_INICIAL = new THREE.Vector3(12, 8.5, 17), CENTRO = new THREE.Vector3(1, 2.8, 0);
 camera.position.copy(VISTA_INICIAL);
 const controls = new OrbitControls(camera, lienzo);
-controls.target.set(0, 3, 0);
+controls.target.copy(CENTRO);
 controls.enableDamping = true;
 controls.minDistance = 8; controls.maxDistance = 40;
 controls.maxPolarAngle = Math.PI / 2 - 0.05;
@@ -254,85 +262,226 @@ function textura(dibujar, repetirX, repetirY) {
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repetirX, repetirY); t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
+// Teja ondulada roja
 const texTeja = textura(g => {
   const grad = g.createLinearGradient(0, 0, 256, 0);
-  grad.addColorStop(0, '#8f9496'); grad.addColorStop(.5, '#c3c7c9'); grad.addColorStop(1, '#8f9496');
+  grad.addColorStop(0, '#7a2219'); grad.addColorStop(.5, '#c2483a'); grad.addColorStop(1, '#7a2219');
   g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
-  g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 250, 256, 6);
-}, 14, 4);
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(0, 248, 256, 8);
+}, 16, 5);
+// Placas de 1.22 x 2.44 m: la textura se repite por metro, para que las juntas queden a escala en cualquier muro
 const texPlaca = (fondo, junta) => textura(g => {
   g.fillStyle = fondo; g.fillRect(0, 0, 256, 256);
   g.strokeStyle = junta; g.lineWidth = 3; g.strokeRect(0, 0, 256, 256);
-}, 4, 2);
+}, 1 / 1.22, 1 / 2.44);
 
-const piezasPorParte = { cubierta: [], paredes: [], cielos: [], entrepiso: [] };
-function pieza(parte, geometria, material, x, y, z) {
+const piezasPorParte = { cubierta: [], paredes: [], cielos: [], entrepiso: [], tanques: [] };
+// Crea una pieza. Si lleva "parte", se puede elegir con el clic; si no, es decoración.
+function pieza(parte, geometria, material, x, y, z, padre = scene) {
   const m = new THREE.Mesh(geometria, material);
   m.position.set(x, y, z);
   m.castShadow = m.receiveShadow = true;
   if (parte) { m.userData.parte = parte; piezasPorParte[parte].push(m); }
-  scene.add(m);
+  padre.add(m);
   return m;
 }
 const mat = (opciones) => new THREE.MeshStandardMaterial({ roughness: .85, metalness: 0, ...opciones });
+const caja = (ancho, alto, fondo) => new THREE.BoxGeometry(ancho, alto, fondo);
 
-// Medidas (metros): casa de 9 x 7, dos pisos de 2.8 m, cubierta a dos aguas. El frente queda abierto (vista en corte).
-const ANCHO = 9, FONDO = 7, PISO = 2.8, MURO = 0.15, LOSA = 0.22, ALTO_CUMBRE = 2.4, ALERO = 0.5;
-const ALTO = PISO * 2;
+// Medidas (metros): casa de 9 x 7, dos pisos de 2.8 m, cubierta a dos aguas.
+// El frente (lado +z) queda abierto, en corte tipo casa de muñecas, para ver el interior.
+const ANCHO = 9, FONDO = 7, PISO = 2.8, MURO = 0.15, LOSA = 0.2, CIELO = 0.03, ALTO_CUMBRE = 2.4, ALERO = 0.5;
+const ALTO = PISO * 2, B = 0.2;                         // B = altura de la placa de cimentación
+const XI = ANCHO / 2 - MURO, ZI = FONDO / 2 - MURO;     // cara interior de los muros
+const ESCALERA = { x0: -XI, x1: -XI + 0.95, zInicio: 2.4, huella: 0.27, pasos: 16 };
+ESCALERA.zFin = ESCALERA.zInicio - (ESCALERA.pasos - 1) * ESCALERA.huella;   // donde llega al segundo piso
+const HUECO = { x0: -XI + 0.02, x1: ESCALERA.x1 + 0.05, z0: ESCALERA.zFin, z1: 1.75 };   // hueco del entrepiso sobre la escalera
+const TANQUE = { x: ANCHO / 2 + 2.4, z: -2.0, base: 0.3, alto: 0.3 + 1.55 };
 
-// Terreno y placa de cimentación (no se pueden elegir)
-pieza(null, new THREE.CircleGeometry(22, 48), mat({ color: 0x9fae8f }), 0, -0.02, 0).rotation.x = -Math.PI / 2;
-pieza(null, new THREE.BoxGeometry(ANCHO + 0.4, 0.2, FONDO + 0.4), mat({ color: 0xa7a7a2 }), 0, 0.1, 0);
-
-// Paredes: fondo, laterales, culatas (triángulos bajo la cubierta) y divisiones internas
-const matMuro = mat({ map: texPlaca('#eeeae2', '#d6d0c4') });
-const matMuroInt = mat({ map: texPlaca('#f6f3ee', '#e2ddd3') });
-pieza('paredes', new THREE.BoxGeometry(ANCHO, ALTO, MURO), matMuro, 0, 0.2 + ALTO / 2, -FONDO / 2 + MURO / 2);
-pieza('paredes', new THREE.BoxGeometry(MURO, ALTO, FONDO), matMuro, -ANCHO / 2 + MURO / 2, 0.2 + ALTO / 2, 0);
-pieza('paredes', new THREE.BoxGeometry(MURO, ALTO, FONDO), matMuro, ANCHO / 2 - MURO / 2, 0.2 + ALTO / 2, 0);
-// Muro frontal solo en las esquinas (para que se vea que existe, sin tapar el corte)
-pieza('paredes', new THREE.BoxGeometry(1.6, ALTO, MURO), matMuro, -ANCHO / 2 + 0.8, 0.2 + ALTO / 2, FONDO / 2 - MURO / 2);
-pieza('paredes', new THREE.BoxGeometry(1.6, ALTO, MURO), matMuro, ANCHO / 2 - 0.8, 0.2 + ALTO / 2, FONDO / 2 - MURO / 2);
-const culata = new THREE.Shape();
-culata.moveTo(-FONDO / 2, 0); culata.lineTo(FONDO / 2, 0); culata.lineTo(0, ALTO_CUMBRE); culata.closePath();
-for (const lado of [-1, 1]) {
-  // La forma se extruye en Z; al girarla 90° el grosor queda en X, desde x hasta x + MURO
-  const c = pieza('paredes', new THREE.ExtrudeGeometry(culata, { depth: MURO, bevelEnabled: false }), matMuro,
-    lado * (ANCHO / 2) - (lado > 0 ? MURO : 0), 0.2 + ALTO, 0);
-  c.rotation.y = Math.PI / 2;
-}
-for (const piso of [0, 1]) {
-  pieza('paredes', new THREE.BoxGeometry(MURO, PISO - LOSA, FONDO - 1.2), matMuroInt, -0.6, 0.2 + piso * PISO + (PISO - LOSA) / 2, -0.6);
-  pieza('paredes', new THREE.BoxGeometry(3.2, PISO - LOSA, MURO), matMuroInt, -ANCHO / 2 + 1.6 + 0.15, 0.2 + piso * PISO + (PISO - LOSA) / 2, 0.2);
-}
-// Ventanas (decoración, no se eligen)
-const matVidrio = mat({ color: 0x5d7f98, roughness: .2, metalness: .3 });
-for (const piso of [0, 1]) for (const x of [-2.6, 1.2, 3.2]) pieza(null, new THREE.BoxGeometry(1.1, 1.1, 0.04), matVidrio, x, 0.2 + piso * PISO + 1.6, -FONDO / 2 - 0.01);
-for (const piso of [0, 1]) for (const lado of [-1, 1]) {
-  const v = pieza(null, new THREE.BoxGeometry(0.04, 1.1, 1.3), matVidrio, lado * (ANCHO / 2 + 0.01), 0.2 + piso * PISO + 1.6, 0.9);
-  v.castShadow = false;
-}
-
-// Pisos (entrepiso): placa entre el primer y el segundo piso
-const matEntrepiso = mat({ map: texPlaca('#b9b5ab', '#8f8b82') });
-pieza('entrepiso', new THREE.BoxGeometry(ANCHO - 2 * MURO, LOSA, FONDO - MURO), matEntrepiso, 0, 0.2 + PISO - LOSA / 2, MURO / 2);
-
-// Cielos: cielo raso del primer piso (bajo el entrepiso) y del segundo (bajo la cubierta)
+// Materiales
+const matMuro = mat({ map: texPlaca('#eeeae2', '#d9d3c7') });
+const matMuroInt = mat({ map: texPlaca('#f7f4ef', '#e4dfd5') });
+const matEntrepiso = mat({ map: texPlaca('#bdb6a8', '#938c7f') });
 const matCielo = mat({ map: texPlaca('#fbfaf7', '#e5e1d8'), side: THREE.DoubleSide });
-pieza('cielos', new THREE.BoxGeometry(ANCHO - 2 * MURO, 0.04, FONDO - MURO), matCielo, 0, 0.2 + PISO - LOSA - 0.06, MURO / 2);
-pieza('cielos', new THREE.BoxGeometry(ANCHO - 2 * MURO, 0.04, FONDO - MURO), matCielo, 0, 0.2 + ALTO - 0.05, MURO / 2);
+const matTeja = mat({ map: texTeja, roughness: .65 });
+const matMarco = mat({ color: 0xf2efe9 });
+const matVidrio = new THREE.MeshStandardMaterial({ color: 0x9cc6dc, roughness: .05, metalness: .1, transparent: true, opacity: .35 });
+const matMadera = mat({ color: 0x8f5f3a, roughness: .7 });
+const matMaderaClara = mat({ color: 0xb98a5e, roughness: .7 });
+const matMetal = mat({ color: 0x3b3b3b, roughness: .4, metalness: .5 });
 
-// Cubierta a dos aguas: dos faldones con onda de teja
+// Terreno, andén y placa de cimentación (no se pueden elegir)
+pieza(null, new THREE.CircleGeometry(22, 64), mat({ color: 0x93a882 }), 0, -0.02, 0).rotation.x = -Math.PI / 2;
+pieza(null, caja(ANCHO + 0.5, B, FONDO + 0.5), mat({ color: 0xb3aea4 }), 0, B / 2, 0);
+pieza(null, caja(ANCHO - 2 * MURO, 0.01, FONDO - MURO), mat({ color: 0xd8cbb6, roughness: .5 }), 0, B + 0.005, MURO / 2);   // piso cerámico
+
+// ---------- Muros con vanos (ventanas y puertas que se ven por dentro y por fuera) ----------
+// El muro se dibuja como un rectángulo de largo x alto con huecos, y se extruye con el grosor MURO.
+// Las coordenadas de los huecos son locales: x desde el borde izquierdo del muro, y desde su base.
+function rect(path, x0, y0, x1, y1) { path.moveTo(x0, y0); path.lineTo(x1, y0); path.lineTo(x1, y1); path.lineTo(x0, y1); path.closePath(); return path; }
+function muro(parte, material, largo, alto, huecos, x, y, z, giroY = 0) {
+  const grupo = new THREE.Group();
+  grupo.position.set(x, y, z); grupo.rotation.y = giroY; scene.add(grupo);
+  const forma = rect(new THREE.Shape(), 0, 0, largo, alto);
+  for (const h of huecos) forma.holes.push(rect(new THREE.Path(), h.x, h.y, h.x + h.w, h.y + h.h));
+  pieza(parte, new THREE.ExtrudeGeometry(forma, { depth: MURO, bevelEnabled: false }), material, 0, 0, 0, grupo);
+  for (const h of huecos) (h.tipo === 'ventana' ? ventana : puerta)(grupo, h);
+  return grupo;
+}
+function ventana(grupo, { x, y, w, h }) {
+  const f = 0.05, d = MURO + 0.02, cx = x + w / 2, cy = y + h / 2;
+  pieza(null, caja(w, f, d), matMarco, cx, y + h - f / 2, MURO / 2, grupo);
+  pieza(null, caja(w, f, d), matMarco, cx, y + f / 2, MURO / 2, grupo);
+  pieza(null, caja(f, h, d), matMarco, x + f / 2, cy, MURO / 2, grupo);
+  pieza(null, caja(f, h, d), matMarco, x + w - f / 2, cy, MURO / 2, grupo);
+  if (w > 1.1) pieza(null, caja(0.04, h, 0.06), matMarco, cx, cy, MURO / 2, grupo);          // parral central
+  pieza(null, caja(w + 0.14, 0.04, MURO + 0.12), matMarco, cx, y - 0.02, MURO / 2, grupo);     // alféizar
+  const vidrio = pieza(null, caja(w - 2 * f, h - 2 * f, 0.01), matVidrio, cx, cy, MURO / 2, grupo);
+  vidrio.castShadow = false;
+}
+function puerta(grupo, { x, y, w, h, abierta = 0 }) {
+  const f = 0.05, d = MURO + 0.02;
+  pieza(null, caja(w, f, d), matMarco, x + w / 2, y + h - f / 2, MURO / 2, grupo);
+  pieza(null, caja(f, h, d), matMarco, x + f / 2, y + h / 2, MURO / 2, grupo);
+  pieza(null, caja(f, h, d), matMarco, x + w - f / 2, y + h / 2, MURO / 2, grupo);
+  // La hoja gira sobre la bisagra (lado izquierdo del vano)
+  const bisagra = new THREE.Group();
+  bisagra.position.set(x + f, y, MURO / 2); bisagra.rotation.y = abierta; grupo.add(bisagra);
+  const ancho = w - 2 * f, altoHoja = h - f - 0.01;
+  pieza(null, caja(ancho, altoHoja, 0.04), matMadera, ancho / 2, altoHoja / 2, 0, bisagra);
+  for (const lado of [-1, 1]) pieza(null, new THREE.SphereGeometry(0.035, 12, 8), matMetal, ancho - 0.1, 1.0, lado * 0.04, bisagra);
+}
+
+// Orientaciones: el muro se dibuja en el plano XY y se gira para ponerlo en su sitio.
+const GIRO_IZQ = Math.PI / 2;   // muro izquierdo: el largo avanza de adelante hacia atrás
+const GIRO_DER = -Math.PI / 2;  // muro derecho y divisiones: el largo avanza de atrás hacia adelante
+const LARGO_LADO = FONDO - MURO;
+const v1 = 0.9, v2 = PISO + 0.95;   // altura de los antepechos (primer y segundo piso)
+
+// Muro de fondo
+muro('paredes', matMuro, ANCHO, ALTO, [
+  { tipo: 'ventana', x: 2.0, y: v1, w: 1.6, h: 1.3 },        // sala
+  { tipo: 'ventana', x: 6.4, y: 1.2, w: 1.2, h: 1.0 },       // cocina
+  { tipo: 'ventana', x: 2.0, y: v2, w: 1.4, h: 1.2 },        // estudio
+  { tipo: 'ventana', x: 6.3, y: v2 + 0.1, w: 1.4, h: 1.1 },  // alcoba
+], -ANCHO / 2, B, -FONDO / 2);
+// Muro izquierdo (la escalera va contra este muro, por eso solo tiene ventanas arriba)
+muro('paredes', matMuro, LARGO_LADO, ALTO, [
+  { tipo: 'ventana', x: 1.8, y: v2, w: 1.2, h: 1.2 },
+  { tipo: 'ventana', x: 4.4, y: v2, w: 1.2, h: 1.2 },
+], -ANCHO / 2, B, FONDO / 2, GIRO_IZQ);
+// Muro derecho, con la puerta principal
+muro('paredes', matMuro, LARGO_LADO, ALTO, [
+  { tipo: 'ventana', x: 1.0, y: 1.0, w: 1.2, h: 1.2 },       // cocina
+  { tipo: 'puerta', x: 3.6, y: 0.02, w: 1.0, h: 2.15 },      // puerta principal
+  { tipo: 'ventana', x: 1.2, y: v2, w: 1.4, h: 1.2 },
+  { tipo: 'ventana', x: 3.8, y: v2, w: 1.2, h: 1.2 },
+], ANCHO / 2, B, -FONDO / 2 + MURO, GIRO_DER);
+// Esquinas del muro frontal (dejan ver que el frente existe, sin tapar el corte)
+for (const lado of [-1, 1]) pieza('paredes', caja(1.3, ALTO, MURO), matMuro, lado * (XI - 0.65), B + ALTO / 2, FONDO / 2 - MURO / 2);
+// Culatas: triángulos bajo la cubierta, encima de los muros laterales
+const culata = new THREE.Shape();
+culata.moveTo(0, 0); culata.lineTo(FONDO, 0); culata.lineTo(FONDO / 2, ALTO_CUMBRE); culata.closePath();
+pieza('paredes', new THREE.ExtrudeGeometry(culata, { depth: MURO, bevelEnabled: false }), matMuro, -ANCHO / 2, B + ALTO, FONDO / 2).rotation.y = GIRO_IZQ;
+pieza('paredes', new THREE.ExtrudeGeometry(culata, { depth: MURO, bevelEnabled: false }), matMuro, ANCHO / 2, B + ALTO, -FONDO / 2).rotation.y = GIRO_DER;
+// Divisiones interiores con puerta abierta: cocina (primer piso) y alcoba (segundo piso)
+const LARGO_DIV = 0.8 + ZI;
+muro('paredes', matMuroInt, LARGO_DIV, PISO - LOSA - CIELO, [{ tipo: 'puerta', x: 2.4, y: 0.02, w: 0.9, h: 2.1, abierta: -1.2 }],
+  1.5 + MURO / 2, B, -ZI, GIRO_DER);
+muro('paredes', matMuroInt, LARGO_DIV, PISO - CIELO, [{ tipo: 'puerta', x: 2.4, y: 0.02, w: 0.9, h: 2.1, abierta: -1.2 }],
+  0.5 + MURO / 2, B + PISO, -ZI, GIRO_DER);
+
+// ---------- Pisos (entrepiso) y cielos ----------
+// Placa horizontal: se dibuja en el plano (x, -z) y se acuesta. Va por dentro de los muros, sin salirse.
+function placa(parte, material, y, grosor, conHueco) {
+  const forma = rect(new THREE.Shape(), -XI, -(FONDO / 2 - 0.02), XI, ZI);
+  if (conHueco) forma.holes.push(rect(new THREE.Path(), HUECO.x0, -HUECO.z1, HUECO.x1, -HUECO.z0));
+  const m = pieza(parte, new THREE.ExtrudeGeometry(forma, { depth: grosor, bevelEnabled: false }), material, 0, y, 0);
+  m.rotation.x = -Math.PI / 2;
+  return m;
+}
+placa('entrepiso', matEntrepiso, B + PISO - LOSA, LOSA, true);
+placa('cielos', matCielo, B + PISO - LOSA - CIELO, CIELO, true);   // cielo raso del primer piso
+placa('cielos', matCielo, B + ALTO - CIELO, CIELO, false);         // cielo raso del segundo piso
+
+// ---------- Escalera (contra el muro izquierdo, sube hacia el fondo) ----------
+{
+  const { pasos, huella } = ESCALERA, contrahuella = PISO / pasos, recorrido = (pasos - 1) * huella;
+  const perfil = new THREE.Shape();
+  perfil.moveTo(0, 0);
+  for (let i = 0; i < pasos; i++) {
+    perfil.lineTo(i * huella, (i + 1) * contrahuella);
+    if (i < pasos - 1) perfil.lineTo((i + 1) * huella, (i + 1) * contrahuella);
+  }
+  perfil.lineTo(recorrido, PISO - 0.3); perfil.lineTo(0.5, 0); perfil.closePath();
+  pieza(null, new THREE.ExtrudeGeometry(perfil, { depth: ESCALERA.x1 - ESCALERA.x0, bevelEnabled: false }), matMaderaClara,
+    ESCALERA.x0, B, ESCALERA.zInicio).rotation.y = GIRO_IZQ;
+  // Baranda alrededor del hueco, en el segundo piso
+  const yb = B + PISO, altoB = 0.9, xb = HUECO.x1 + 0.03;
+  pieza(null, caja(0.05, 0.05, HUECO.z1 - HUECO.z0), matMetal, xb, yb + altoB, (HUECO.z0 + HUECO.z1) / 2);
+  pieza(null, caja(HUECO.x1 - HUECO.x0 + 0.03, 0.05, 0.05), matMetal, (HUECO.x0 + xb) / 2, yb + altoB, HUECO.z1 + 0.03);
+  for (let z = HUECO.z0 + 0.5; z < HUECO.z1; z += 0.5) pieza(null, caja(0.03, altoB, 0.03), matMetal, xb, yb + altoB / 2, z);
+  for (const x of [HUECO.x0 + 0.3, HUECO.x0 + 0.7, xb]) pieza(null, caja(0.03, altoB, 0.03), matMetal, x, yb + altoB / 2, HUECO.z1 + 0.03);
+}
+
+// ---------- Muebles sencillos (decoración) ----------
+{
+  const y1 = B, y2 = B + PISO, fondo = -ZI;
+  const tela = mat({ color: 0x6f8291 }), blanco = mat({ color: 0xeeebe5 }), meson = mat({ color: 0x4a4a4a, roughness: .4 });
+  // Sala: sofá, tapete y mesa de centro
+  pieza(null, caja(2.0, 0.42, 0.85), tela, -1.7, y1 + 0.21, fondo + 0.45);
+  pieza(null, caja(2.0, 0.45, 0.2), tela, -1.7, y1 + 0.64, fondo + 0.12);
+  for (const lado of [-1, 1]) pieza(null, caja(0.18, 0.6, 0.85), tela, -1.7 + lado * 0.92, y1 + 0.3, fondo + 0.45);
+  pieza(null, caja(2.4, 0.01, 1.5), mat({ color: 0xc9b79c }), -1.6, y1 + 0.015, -1.5);
+  pieza(null, caja(1.0, 0.38, 0.55), matMadera, -1.7, y1 + 0.2, -1.6);
+  // Cocina: mesón contra el muro derecho y comedor
+  pieza(null, caja(0.6, 0.88, 2.2), blanco, XI - 0.3, y1 + 0.44, -2.1);
+  pieza(null, caja(0.64, 0.04, 2.24), meson, XI - 0.32, y1 + 0.9, -2.1);
+  pieza(null, caja(1.2, 0.05, 0.8), matMadera, 2.9, y1 + 0.75, -0.6);
+  for (const [dx, dz] of [[-.55, -.35], [.55, -.35], [-.55, .35], [.55, .35]]) pieza(null, caja(0.05, 0.73, 0.05), matMadera, 2.9 + dx, y1 + 0.365, -0.6 + dz);
+  // Alcoba: cama con cabecero, cobija y almohadas
+  pieza(null, caja(1.5, 0.45, 2.0), blanco, 2.8, y2 + 0.225, fondo + 1.05);
+  pieza(null, caja(1.6, 0.95, 0.08), matMadera, 2.8, y2 + 0.475, fondo + 0.04);
+  pieza(null, caja(1.54, 0.08, 1.3), mat({ color: 0x7d9471 }), 2.8, y2 + 0.49, fondo + 1.4);
+  for (const dx of [-0.38, 0.38]) pieza(null, caja(0.6, 0.12, 0.35), blanco, 2.8 + dx, y2 + 0.51, fondo + 0.3);
+  // Estudio: escritorio
+  pieza(null, caja(1.3, 0.05, 0.6), matMadera, -1.6, y2 + 0.75, fondo + 0.35);
+  for (const dx of [-0.6, 0.6]) pieza(null, caja(0.05, 0.73, 0.55), matMadera, -1.6 + dx, y2 + 0.365, fondo + 0.35);
+}
+
+// ---------- Cubierta a dos aguas en teja roja ----------
 const faldon = Math.hypot(FONDO / 2 + ALERO, ALTO_CUMBRE + ALERO * ALTO_CUMBRE / (FONDO / 2));
 const inclinacion = Math.atan2(ALTO_CUMBRE, FONDO / 2);
-const matTeja = mat({ map: texTeja, roughness: .7 });
 for (const lado of [-1, 1]) {
-  const f = pieza('cubierta', new THREE.BoxGeometry(ANCHO + 2 * ALERO, 0.08, faldon), matTeja, 0, 0, 0);
+  const f = pieza('cubierta', caja(ANCHO + 2 * ALERO, 0.08, faldon), matTeja, 0, 0, 0);
   f.rotation.x = lado * inclinacion;
   const mitad = faldon / 2;
-  f.position.set(0, 0.2 + ALTO + ALTO_CUMBRE - Math.sin(inclinacion) * mitad + 0.08, lado * Math.cos(inclinacion) * mitad);
+  f.position.set(0, B + ALTO + ALTO_CUMBRE - Math.sin(inclinacion) * mitad + 0.08, lado * Math.cos(inclinacion) * mitad);
 }
-pieza('cubierta', new THREE.CylinderGeometry(0.14, 0.14, ANCHO + 2 * ALERO, 16), mat({ color: 0x8c9193 }), 0, 0.2 + ALTO + ALTO_CUMBRE + 0.1, 0).rotation.z = Math.PI / 2;
+pieza('cubierta', new THREE.CylinderGeometry(0.14, 0.14, ANCHO + 2 * ALERO, 16), mat({ color: 0x8e2b20, roughness: .6 }), 0, B + ALTO + ALTO_CUMBRE + 0.1, 0).rotation.z = Math.PI / 2;
+
+// ---------- Tanque de agua al lado de la casa ----------
+{
+  const { x, z, base } = TANQUE, alto = 1.55, rAbajo = 0.62, rArriba = 0.78;
+  pieza(null, caja(1.9, base, 1.9), mat({ color: 0xb3aea4 }), x, base / 2, z);
+  const matTanque = mat({ color: 0x3e4349, roughness: .55 });
+  pieza('tanques', new THREE.CylinderGeometry(rArriba, rAbajo, alto, 48), matTanque, x, base + alto / 2, z);
+  for (const t of [0.3, 0.6]) {   // anillos de refuerzo
+    const anillo = pieza('tanques', new THREE.TorusGeometry(rAbajo + (rArriba - rAbajo) * t + 0.01, 0.025, 8, 48), matTanque, x, base + alto * t, z);
+    anillo.rotation.x = Math.PI / 2;
+  }
+  pieza('tanques', new THREE.CylinderGeometry(rArriba + 0.05, rArriba + 0.05, 0.08, 48), matTanque, x, base + alto + 0.04, z);
+  pieza('tanques', new THREE.CylinderGeometry(0.25, 0.25, 0.06, 32), matTanque, x, base + alto + 0.11, z);
+  // Tubo hacia la casa
+  const largoTubo = x - rAbajo - ANCHO / 2;
+  pieza(null, new THREE.CylinderGeometry(0.04, 0.04, largoTubo, 12), mat({ color: 0xd9d6cf }), ANCHO / 2 + largoTubo / 2, base + 0.15, z).rotation.z = Math.PI / 2;
+}
+
+// ---------- Jardín: camino de entrada y arbustos ----------
+for (let i = 0; i < 5; i++) pieza(null, caja(0.7, 0.04, 0.9), mat({ color: 0xc8c1b4 }), ANCHO / 2 + 0.6 + i * 0.9, 0.02, 0.7);
+const matArbusto = mat({ color: 0x55804a });
+for (const [x, z, r] of [[-ANCHO / 2 - 0.7, 2.6, 0.55], [-ANCHO / 2 - 0.7, -2.4, 0.5], [-ANCHO / 2 - 0.6, 0.1, 0.4], [ANCHO / 2 + 0.7, 2.8, 0.5], [ANCHO / 2 + 1.3, -3.6, 0.45]])
+  pieza(null, new THREE.SphereGeometry(r, 20, 14), matArbusto, x, r * 0.8, z);
 
 // ================= Selección =================
 const RESALTE = new THREE.Color(0x7fa6c4);   // azul grisáceo suave para la parte elegida
@@ -363,7 +512,7 @@ function elegir(parte) {
 function pintarDetalle() {
   const caja = el('detalle');
   if (!seleccion) {
-    caja.innerHTML = `<h2>Elige una parte de la casa</h2><p>Haz clic en la cubierta, las paredes, los cielos o los pisos, o usa los botones de arriba, para ver qué marcas participan en ese sistema constructivo.</p>`;
+    caja.innerHTML = `<h2>Elige una parte de la casa</h2><p>Haz clic en la cubierta, las paredes, los cielos, los pisos o el tanque, o usa los botones de arriba, para ver qué marcas participan en ese sistema constructivo.</p>`;
     return;
   }
   const p = PARTES[seleccion], lista = marcas[seleccion];
@@ -397,7 +546,7 @@ function alternarCubierta() {
   el('btnCubierta').textContent = cubiertaVisible ? 'Quitar cubierta' : 'Poner cubierta';
 }
 el('btnCubierta').addEventListener('click', alternarCubierta);
-el('btnCentrar').addEventListener('click', () => { camera.position.copy(VISTA_INICIAL); controls.target.set(0, 3, 0); controls.update(); });
+el('btnCentrar').addEventListener('click', () => { camera.position.copy(VISTA_INICIAL); controls.target.copy(CENTRO); controls.update(); });
 
 // Clic (sin arrastrar) sobre una pieza
 const rayo = new THREE.Raycaster(), puntero = new THREE.Vector2();
@@ -423,10 +572,11 @@ lienzo.addEventListener('pointerleave', () => { if (encima) { encima = null; lie
 
 // Etiquetas flotantes con el nombre de cada parte
 const ANCLAS = {
-  cubierta: new THREE.Vector3(0, 0.2 + ALTO + ALTO_CUMBRE + 0.6, 0),
-  paredes: new THREE.Vector3(-ANCHO / 2 - 0.2, 0.2 + PISO * 1.5, -1.6),
-  cielos: new THREE.Vector3(1.8, 0.2 + PISO - LOSA - 0.35, 1.8),
-  entrepiso: new THREE.Vector3(1.8, 0.2 + PISO + 0.35, 2.6),
+  cubierta: new THREE.Vector3(0, B + ALTO + ALTO_CUMBRE + 0.6, 0),
+  paredes: new THREE.Vector3(2.6, B + PISO + 0.5, -FONDO / 2 + MURO + 0.05),
+  cielos: new THREE.Vector3(-1.2, B + ALTO - 0.3, FONDO / 2 - 0.5),       // cielo raso del segundo piso
+  entrepiso: new THREE.Vector3(1.6, B + PISO + 0.2, FONDO / 2 - 0.4),
+  tanques: new THREE.Vector3(TANQUE.x, TANQUE.alto + 0.9, TANQUE.z),
 };
 el('etiquetas').innerHTML = Object.keys(ANCLAS).map(p => `<span class="etiqueta" data-parte="${p}">${escapar(PARTES[p].nombre)}</span>`).join('');
 const v = new THREE.Vector3();

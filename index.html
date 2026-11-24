@@ -77,9 +77,12 @@
   .marcas .productos { display: flex; flex-wrap: wrap; gap: 5px; }
   .marcas .productos span { font-size: 12px; border-radius: 999px; padding: 2px 8px; background: var(--panel); border: 1px solid var(--line); }
   .insignia { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
-  .insignia.datos { background: var(--acento-suave); color: var(--acento-texto); border: 1px solid var(--acento); }
   .insignia.portafolio { background: transparent; color: var(--muted); border: 1px dashed var(--muted); }
   .vacio { color: var(--muted); font-size: 14px; }
+  .especificaciones { width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .especificaciones th, .especificaciones td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .especificaciones tr:last-child th, .especificaciones tr:last-child td { border-bottom: 0; }
+  .especificaciones th { width: 38%; font-weight: 600; background: var(--acento-suave); color: var(--acento-texto); }
   .grupo { margin: 4px 0 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
   .nota { font-size: 12.5px; color: var(--muted); padding: 0 16px 14px; margin: 0; }
 
@@ -143,67 +146,62 @@
 // =====================================================================
 //  DATOS EDITABLES: marcas por parte de la casa
 // ---------------------------------------------------------------------
-//  Copia fija tomada del monitoreo de precios al 18/11/2026.
+//  Competencia identificada por el equipo (tablero "¿Quién es nuestra competencia?").
 //  Cada marca lleva:
 //    marca:      nombre que se muestra
-//    lineas:     (opcional) líneas o submarcas del grupo, p. ej. Eterboard
+//    lineas:     (opcional) líneas o submarcas, p. ej. Eterboard
 //    productos:  lo que aporta la marca en esa parte
-//    portafolio: (opcional) true = la marca fabrica para esa parte, pero
-//                no aparece en el monitoreo de precios
-//  En Paredes y Cielos, las marcas cuyos productos son solo "Masilla" se
-//  muestran aparte, bajo "Masillas para juntas y acabado".
+//    portafolio: (opcional) true = la marca fabrica para esa parte, pero no
+//                está en la lista del tablero
 //  TOPTEC siempre sale primero, sin importar dónde se escriba.
 // =====================================================================
-const FECHA_DATOS = '18/11/2026';
-
-// Marcas de masillas (las mismas para Paredes y Cielos)
-const MASILLAS = ['Corona', 'Supermastick', 'Sika', 'Megaacabados', 'Megajuntas', 'Gypsumastic', 'Sellaflex', 'Sellapanel',
-  'Topex', 'Recol', 'Algreco', 'Coverfil', 'Lider', 'Sapolin', 'Bellota']
-  .map(marca => ({ marca, productos: ['Masilla'] }));
 
 // Placas para muros y cielo raso (las mismas marcas en Paredes y Cielos)
 const PLACAS = [
   { marca: 'TOPTEC', productos: ['Placa fibrocemento'] },
-  { marca: 'Eternit', lineas: ['Eterboard'], productos: ['Placa fibrocemento'] },
-  { marca: 'Etex', lineas: ['Superboard', 'Gyplac'], productos: ['Placa fibrocemento', 'Placa yeso'] },
-  { marca: 'Knauf', productos: ['Placa yeso'] },
+  { marca: 'Eternit', lineas: ['Eterboard', 'Design'], productos: ['Placa fibrocemento'] },
+  { marca: 'Etex', lineas: ['Superboard', 'Gyplac'], productos: ['Placa fibrocemento', 'Yeso RH', 'Yeso RF', 'Yeso estándar'] },
+  { marca: 'Knauf', productos: ['Yeso RH', 'Yeso RF (por confirmar)', 'Yeso estándar'] },
 ];
 
 const MARCAS = {
   cubierta: [
     { marca: 'TOPTEC', productos: ['Teja fibrocemento', 'Teja polipropileno'] },
     { marca: 'Eternit', productos: ['Teja fibrocemento', 'Teja polipropileno'] },
-    { marca: 'Etex', lineas: ['Colombit'], productos: ['Teja fibrocemento'] },
-    { marca: 'Ajover', productos: ['Teja UPVC', 'Teja policarbonato', 'Teja polipropileno'] },
-    { marca: 'Arkos', productos: ['Teja UPVC', 'Teja policarbonato'] },
-    ...['Klar', 'Bolkow', 'Sigmatech', 'Fibromath', 'Castellana', 'ADL', 'Sigma'].map(marca => ({ marca, productos: ['Teja UPVC'] })),
-    ...['Mathiesen', 'Makrolux'].map(marca => ({ marca, productos: ['Teja policarbonato'] })),
-    ...['Koyo', 'Techolit'].map(marca => ({ marca, productos: ['Teja polipropileno'] })),
-    { marca: 'Proteja', productos: ['Teja fibrocemento colonial'] },
+    { marca: 'Etex', lineas: ['Proteja'], productos: ['Teja fibrocemento'] },
+    { marca: 'Arkos', productos: ['Teja UPVC', 'Teja policarbonato', 'Teja alveolar'] },
+    { marca: 'Sigma', productos: ['Teja UPVC', 'Teja policarbonato'] },
+    { marca: 'Koyo', productos: ['Teja polipropileno', 'Teja policarbonato'] },
+    { marca: 'Mathiesen', productos: ['Teja policarbonato', 'Teja metálica'] },
   ],
-  paredes: [...PLACAS, ...MASILLAS],
-  cielos: [...PLACAS, ...MASILLAS],
+  paredes: PLACAS,
+  cielos: PLACAS,
   entrepiso: [
-    { marca: 'TOPTEC', productos: ['Placa fibrocemento 14 mm o más'] },
-    { marca: 'Eternit', lineas: ['Eterboard'], productos: ['Placa fibrocemento 14 mm o más'] },
-    { marca: 'Etex', lineas: ['Superboard'], productos: ['Placa fibrocemento 14 mm o más'] },
+    { marca: 'TOPTEC', productos: ['Placa fibrocemento'] },
+    { marca: 'Eternit', lineas: ['Eterboard'], productos: ['Placa fibrocemento'] },
+    { marca: 'Etex', lineas: ['Superboard'], productos: ['Placa fibrocemento'] },
     { marca: 'Knauf', productos: [], portafolio: true },
   ],
-  // Tanques: por ahora solo el portafolio conocido. Agregar aquí las marcas que aparezcan en el monitoreo.
   tanques: [
-    { marca: 'TOPTEC', productos: ['Tanque de agua'], portafolio: true },
-    { marca: 'Eternit', productos: ['Tanque de agua'], portafolio: true },
-    { marca: 'Etex', productos: ['Tanque de agua'], portafolio: true },
+    { marca: 'TOPTEC', productos: [] },
+    { marca: 'Eternit', productos: [] },
+    { marca: 'Etex', lineas: ['Acquaviva'], productos: [] },
+    ...['Colempaques', 'Fontana','Rotoplas', 'Polinter', 'Delagua'].map(marca => ({ marca, productos: [] })),
   ],
 };
 
-// Textos de cada parte
+// Textos y especificaciones de cada parte (la tabla que sale arriba de las marcas)
 const PARTES = {
-  cubierta: { nombre: 'Cubierta', resumen: 'Tejas y caballetes', texto: 'Tejas de fibrocemento, UPVC, polipropileno y policarbonato, con sus caballetes y accesorios.' },
-  paredes: { nombre: 'Paredes', resumen: 'Placas y masillas', texto: 'Muros en construcción liviana: placas de fibrocemento (6 a 12 mm) o de yeso, con masillas para juntas y acabado.' },
-  cielos: { nombre: 'Cielos', resumen: 'Cielo raso', texto: 'Cielo raso con placas de yeso o fibrocemento delgado (4 a 8 mm) y masillas para juntas y acabado.' },
-  entrepiso: { nombre: 'Pisos', resumen: 'Entrepiso', texto: 'Entrepiso seco con placas de fibrocemento de alta densidad (14 mm o más).' },
-  tanques: { nombre: 'Tanques', resumen: 'Almacenamiento de agua', texto: 'Tanques para almacenamiento de agua potable de la vivienda.' },
+  cubierta: { nombre: 'Cubierta', resumen: 'Tejas y caballetes', texto: 'Cubierta en teja con sus caballetes y accesorios.',
+    especificaciones: [['Materiales', 'Fibrocemento, polipropileno, UPVC, policarbonato, alveolar y metálica']] },
+  paredes: { nombre: 'Paredes', resumen: 'Placas de 8 a 12 mm', texto: 'Muros en construcción liviana con placas de fibrocemento o de yeso.',
+    especificaciones: [['Espesores', '8 a 12 mm'], ['Placa', 'Fibrocemento y yeso'], ['Tipos de yeso', 'RH (resistente a la humedad), RF (resistente al fuego) y estándar']] },
+  cielos: { nombre: 'Cielos', resumen: 'Placas de 4 y 6 mm', texto: 'Cielo raso con placas delgadas de fibrocemento o de yeso.',
+    especificaciones: [['Espesores', '4 y 6 mm'], ['Placa', 'Fibrocemento y yeso'], ['Tipos de yeso', 'RH (resistente a la humedad), RF (resistente al fuego) y estándar']] },
+  entrepiso: { nombre: 'Pisos', resumen: 'Placas de 14 mm o más', texto: 'Entrepiso seco con placas de fibrocemento de alta densidad.',
+    especificaciones: [['Espesores', '14 mm en adelante'], ['Placa', 'Fibrocemento']] },
+  tanques: { nombre: 'Tanques', resumen: 'Almacenamiento de agua', texto: 'Tanques para almacenamiento de agua.',
+    especificaciones: [['Capacidades', '500 L y 1.000 L'], ['Líneas', 'Económica, estándar, sistema séptico y agro']] },
 };
 // ======================= Fin de los datos editables =======================
 
@@ -215,7 +213,7 @@ const marcas = Object.fromEntries(Object.entries(MARCAS).map(([parte, lista]) =>
   lista.map((m, i) => ({ ...m, i })).sort((a, b) =>
     (b.marca === 'TOPTEC') - (a.marca === 'TOPTEC') || !!a.portafolio - !!b.portafolio || a.i - b.i)]));
 
-el('nota').textContent = `Marcas vistas en el monitoreo de precios al ${FECHA_DATOS} (copia fija). "Portafolio" = la marca fabrica para esa parte, pero no aparece en el monitoreo.`;
+el('nota').textContent = 'Competencia identificada por el equipo. "Portafolio" = la marca fabrica para esa parte, pero no está en la lista de competencia.';
 
 let THREE, OrbitControls;
 try {
@@ -519,18 +517,16 @@ function pintarDetalle() {
   const tarjeta = m => `
       <li class="${m.marca === 'TOPTEC' ? 'toptec' : ''}">
         <div class="nombre"><span>${escapar(m.marca)}${m.lineas?.length ? ` <span class="lineas">(${escapar(m.lineas.join(', '))})</span>` : ''}</span>
-          <span class="insignia ${m.portafolio ? 'portafolio' : 'datos'}">${m.portafolio ? 'Portafolio' : 'En el monitoreo'}</span></div>
+          ${m.portafolio ? '<span class="insignia portafolio">Portafolio</span>' : ''}</div>
         ${m.productos?.length ? `<div class="productos">${m.productos.map(x => `<span>${escapar(x)}</span>`).join('')}</div>` : ''}
       </li>`;
-  // En paredes y cielos, las marcas que solo venden masillas van aparte de las de placas
-  const soloMasilla = m => m.productos?.length > 0 && m.productos.every(x => x === 'Masilla');
-  const grupos = lista.some(soloMasilla) && lista.some(m => !soloMasilla(m))
-    ? [['Placas', lista.filter(m => !soloMasilla(m))], ['Masillas para juntas y acabado', lista.filter(soloMasilla)]]
-    : [['', lista]];
+  const especificaciones = p.especificaciones?.length ? `<table class="especificaciones"><tbody>
+      ${p.especificaciones.map(([dato, valor]) => `<tr><th scope="row">${escapar(dato)}</th><td>${escapar(valor)}</td></tr>`).join('')}
+    </tbody></table>` : '';
   caja.innerHTML = `<h2>${escapar(p.nombre)}</h2><p>${escapar(p.texto)}</p>
-    <p><b>${lista.length}</b> marcas</p>
-    ${lista.length ? grupos.map(([nombre, l]) => `${nombre ? `<h3 class="grupo">${escapar(nombre)} · ${l.length}</h3>` : ''}
-      <ul class="marcas">${l.map(tarjeta).join('')}</ul>`).join('') : '<p class="vacio">No hay marcas registradas para esta parte.</p>'}`;
+    ${especificaciones}
+    <h3 class="grupo">Marcas · ${lista.length}</h3>
+    ${lista.length ? `<ul class="marcas">${lista.map(tarjeta).join('')}</ul>` : '<p class="vacio">No hay marcas registradas para esta parte.</p>'}`;
 }
 
 el('partes').innerHTML = Object.entries(PARTES).map(([id, p]) =>
